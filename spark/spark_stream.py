@@ -46,7 +46,7 @@ def read_from_kafka(spark):
             .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
             .option("subscribe", KAFKA_TOPIC)
             .option("startingOffsets", "earliest")
-            .option("maxOffsetsPerTrigger", 5000)
+            .option("maxOffsetsPerTrigger", 30000) # 5000 -> 30000 
             .load()
     )
 
@@ -94,6 +94,8 @@ def write_to_postgres(batch_df, batch_id):
         .option("user", POSTGRES_USER)
         .option("password", POSTGRES_PASSWORD)
         .option("driver", "org.postgresql.Driver")
+        .option("batchsize", "10000") # JDBC 배치 사이즈 추가 
+        .option("rewriteBatchedInserts", "true") # 성능 최적화 옵션 
         .mode("append")
         .save()
     )
@@ -122,6 +124,7 @@ def start_postgres_query(df):
         df.writeStream
             .outputMode("append")
             .foreachBatch(write_to_postgres)
+            .trigger(processingTime= '5 seconds') # 5초 간격 트리거
             .option("checkpointLocation", "/opt/spark/work-dir/checkpoints/postgres")
             .start()
     )
@@ -150,6 +153,9 @@ def main():
     console_query.stop()
     postgres_query.stop()
     spark.stop()
+
+    print("===== Final Postgres Query Progress =====")
+    print(postgres_query.lastProgress)
 
 if __name__ == "__main__":
     main()
