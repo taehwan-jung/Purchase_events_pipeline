@@ -34,3 +34,16 @@ Kafka, Spark, Airflow를 활용하여 온라인 소매 데이터를 실시간으
 | **소요 시간** | 51.21초 | 16.66초 | **67.5% 단축** |
 | **평균 레이턴시** | 약 0.094 ms | 약 0.030 ms | **약 3배 향상** |
 
+### Spark Streaming 성능 최적화
+
+- **SQL statement rewriting**: **rewriteBatchedInserts** 활성화로 DB 파싱 부하 절감
+- **Batch Size 조정**: **maxOffsetsPerTrigger=30000** 설정 (배치당 처리량 증가) 
+- **JDBC batch writing**: **batchsize=10,000**으로 SQL과 네트워크 왕복 횟수 최소화
+
+### Spark Streaming 성능 비교 결과
+
+| 지표 | 기존 (Baseline) | 최적화 (Optimized) | 개선율 |
+|------|----------------|-------------------|--------|
+| **처리량** | 26,780 msg/sec | 77,380 msg/sec | **+188.9% (약 3배)** |
+| **배치당 유입량** | 14,997 rows | 89,994 rows | **600% 향상** |
+| **DB 저장 지연 (addBatch)** | 290 ms  | 755 ms  | **데이터 6배 증가 대비 지연 최소화** |
