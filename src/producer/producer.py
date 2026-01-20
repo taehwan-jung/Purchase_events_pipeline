@@ -36,13 +36,21 @@ def collect_data(producer):
         logger.info("producer가 없습니다.")
         return
     logger.info("데이터 수집을 시작합니다.")
-    
-    # CSV 파일 읽기
 
+    # 성능 메트릭
+    start_time = time.time()
+    message_count = 0
+    error_count = 0
+
+    # CSV 파일 읽기
     df = pd.read_csv(CSV_FILE_PATH, encoding="utf-8")
+    total_records = len(df)
+
+    logger.info(f"총 {total_records}개의 레코드를 전송합니다.")
 
     # Kafka 메시지 전송
-    for _, row in df.iterrows():
+    for idx, row in enumerate(df.iterrows()):
+        _, row = row
         message = {
             "invoice_no": str(row["InvoiceNo"]),
             "stock_code": str(row["StockCode"]),
@@ -56,21 +64,48 @@ def collect_data(producer):
 
         try:
             producer.send(KAFKA_TOPIC, value=message)
-            logger.info(f"메시지 전송 성공: {message['invoice_no']}")
+            message_count += 1
+
+            # 진행 상황 로깅 (10%마다)
+            if (idx + 1) % (total_records // 10) == 0:
+                progress = ((idx + 1) / total_records) * 100
+                logger.info(f"진행률: {progress:.1f}% ({idx + 1}/{total_records})")
+
         except Exception as e:
             logger.error(f"메시지 전송 실패: {e}")
+            error_count += 1
 
     producer.flush()
+
+    # 성능 메트릭 계산
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    throughput = message_count / elapsed_time if elapsed_time > 0 else 0
+
+    logger.info("=" * 50)
     logger.info("모든 메시지 전송 완료")
+    logger.info(f"총 메시지 수: {message_count}")
+    logger.info(f"실패 메시지 수: {error_count}")
+    logger.info(f"소요 시간: {elapsed_time:.2f}초")
+    logger.info(f"처리량(Throughput): {throughput:.2f} msg/sec")
+    logger.info("=" * 50)
+
+    return {
+        "total_messages": message_count,
+        "failed_messages": error_count,
+        "elapsed_time": elapsed_time,
+        "throughput": throughput
+    }
 
 
 
 def main():
     logger.info("데이터 수집 시작")
     producer = create_producer()
-    
+
     try:
-        collect_data(producer)
+        metrics = collect_data(producer)
+        return metrics
     except KeyboardInterrupt:
         logger.info("사용자에 의해 프로그램이 종료되었습니다.")
     except Exception as e:
