@@ -4,6 +4,11 @@
 
 A real-time data pipeline project that collects online retail data, performs analytics, and provides machine learning-based prediction services using Kafka, Spark, and Airflow.
 
+## System Architecture
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/a97d0a0f-24f4-43e1-8b20-d28889ead545" width="80%" alt="Data Pipeline Architecture">
+</p>
+
 ## 🔄 Project Workflow
 
 1. **Data Ingestion**: Real-time transmission of online retail transaction data through Kafka Producer.
