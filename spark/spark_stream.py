@@ -18,6 +18,8 @@ def create_spark_session():
                     "org.postgresql:postgresql:42.7.3"
             )
             .config("spark.sql.shuffle.partitions", 3)
+            .config("spark.ui.prometheus.enabled", "true")
+            
             .getOrCreate()
     )
 
@@ -46,7 +48,10 @@ def read_from_kafka(spark):
             .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
             .option("subscribe", KAFKA_TOPIC)
             .option("startingOffsets", "earliest")
-            .option("maxOffsetsPerTrigger", 30000)
+            .option("maxOffsetsPerTrigger", 1000000)
+            .option("kafka.group.id", "spark-streaming-consumer")
+            .option("kafka.group.commit.offsets", "true")
+            .option("failOnDataLoss", "false")
             .load()
     )
 
@@ -81,6 +86,8 @@ def add_timestamp_column(parsed_df):
 
 # Save to PostgreSQL in batch units
 def write_to_postgres(batch_df, batch_id):
+    # Start_time
+    start_time = time.time()
     print("🔥 [foreachBatch] batch_id =", batch_id)
     # 1) Check if this batch actually has data
     count = batch_df.count()
@@ -97,9 +104,15 @@ def write_to_postgres(batch_df, batch_id):
         .save()
     )
     print(f"Batch{batch_id} saved to postgreSQL")
-    print("🔥 BATCH SIZE =", batch_df.count())
+    print("🔥 BATCH SIZE =", count)
     batch_df.printSchema()
 
+    # 2. End_time
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    # 3. End_time print
+    print(f"⏱️ Batch Duration: {duration:.2f} seconds")
 
 
 # Console query
@@ -121,7 +134,7 @@ def start_postgres_query(df):
         df.writeStream
             .outputMode("append")
             .foreachBatch(write_to_postgres)
-            .option("checkpointLocation", "/opt/spark/work-dir/checkpoints/postgres")
+            .option("checkpointLocation", "file:///opt/spark/work-dir/checkpoints/postgres")
             .start()
     )
 
@@ -141,18 +154,20 @@ def main():
     df_with_ts = add_timestamp_column(parsed_df)
 
     # Start console + PostgreSQL queries
-    console_query = start_console_query(df_with_ts)
+    # console_query = start_console_query(df_with_ts)
     postgres_query = start_postgres_query(df_with_ts)
 
-    # query.awaitTermination()
-    time.sleep(60)  # 1 minute
-    console_query.stop()
-    postgres_query.stop()
-    spark.stop()
-
-    print("===== Final Postgres Query Progress =====")
-    print(postgres_query.lastProgress)
+    try:
+        postgres_query.awaitTermination(timeout=3600)
+    except KeyboardInterrupt:
+        print("Stopping query by user...")
+        postgres_query.stop()
+    finally:
+        spark.stop()
+        print("===== Final Postgres Query Progress =====")
+        print(postgres_query.lastProgress)
 
 if __name__ == "__main__":
     main()
 
+# Test Sync
