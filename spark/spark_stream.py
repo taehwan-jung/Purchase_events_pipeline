@@ -46,7 +46,7 @@ def read_from_kafka(spark):
             .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
             .option("subscribe", KAFKA_TOPIC)
             .option("startingOffsets", "earliest")
-            .option("maxOffsetsPerTrigger", 30000) # 5000 -> 30000 
+            .option("maxOffsetsPerTrigger", 500000) 
             .load()
     )
 
