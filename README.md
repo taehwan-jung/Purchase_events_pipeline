@@ -15,6 +15,7 @@ A real-time data pipeline project that collects online retail data, performs ana
 2. **Data Processing**: Real-time collection, preprocessing, and building training datasets using Spark Streaming.
 3. **Orchestration**: Automated triggering of data processing and model update workflows through Airflow.
 4. **Model Serving**: Provides next purchase prediction results based on analyzed data using FastAPI.
+5. **Monitoring**: Real-time metrics collection using Prometheus and system health visualization through Grafana dashboards.
 
 ## 🛠️ Requirements
 
@@ -42,7 +43,7 @@ A real-time data pipeline project that collects online retail data, performs ana
 ### Spark Streaming Performance Optimization
 
 - **SQL Statement Rewriting**: Enabled **rewriteBatchedInserts** to reduce DB parsing overhead
-- **Batch Size Tuning**: Set **maxOffsetsPerTrigger=30000** (increased batch throughput)
+- **Batch Size Tuning**: Set **maxOffsetsPerTrigger** from 10,000 to 100,000 (increased batch throughput)
 - **JDBC Batch Writing**: Set **batchsize=10,000** to minimize SQL and network round-trips
 
 ### Spark Streaming Performance Comparison Results (Based on 1-minute streaming test)
