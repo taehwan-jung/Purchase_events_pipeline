@@ -24,7 +24,7 @@ def create_producer():
         producer = KafkaProducer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_serializer=lambda x: json.dumps(x).encode('utf-8'),
-            enable_idempotence=True,
+            # enable_idempotence=False,
             acks='all',
             retries=5,
              # Performance optimization settings
@@ -32,7 +32,7 @@ def create_producer():
             linger_ms=10,                # Send after 10ms wait
             compression_type='lz4',     # lz4 compression
             buffer_memory=67108864,      # 64MB buffer
-            max_in_flight_requests_per_connection=5  # Concurrent request count
+            max_in_flight_requests_per_connection=5 # Concurrent request count
         )
         logger.info(f"Kafka producer connected successfully: {KAFKA_BOOTSTRAP_SERVERS}")
         return producer
@@ -57,26 +57,28 @@ def collect_data(producer):
 
     logger.info(f"Transmitting {total_records} records.")
 
-    # Send Kafka messages
-    for idx, row in enumerate(df.iterrows()):
-        _, row = row
-        message = {
-            "invoice_no": str(row["InvoiceNo"]),
-            "stock_code": str(row["StockCode"]),
-            "description": str(row["Description"]),
-            "quantity": int(row["Quantity"]),
-            "invoice_date": str(row["InvoiceDate"]),
-            "unit_price": float(row["UnitPrice"]),
-            "customer_id": str(row["CustomerID"]) if "CustomerID" in row else None,
-            "country": str(row["Country"])
-        }
+    # Vectorized data transformation using to_dict()
+    df_renamed = df.rename(columns={
+        "InvoiceNo": "invoice_no",
+        "StockCode": "stock_code",
+        "Description": "description",
+        "Quantity": "quantity",
+        "InvoiceDate": "invoice_date",
+        "UnitPrice": "unit_price",
+        "CustomerID": "customer_id",
+        "Country": "country"
+    })
+    messages = df_renamed.to_dict(orient='records')
 
+    # Send Kafka messages
+    log_interval = total_records // 10 if total_records >= 10 else 1
+    for idx, message in enumerate(messages):
         try:
             producer.send(KAFKA_TOPIC, value=message)
             message_count += 1
 
             # Log progress (every 10%)
-            if (idx + 1) % (total_records // 10) == 0:
+            if (idx + 1) % log_interval == 0:
                 progress = ((idx + 1) / total_records) * 100
                 logger.info(f"Progress: {progress:.1f}% ({idx + 1}/{total_records})")
 

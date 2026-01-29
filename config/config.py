@@ -1,10 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Load .env file
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(env_path)
 
 # Environment variables
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
