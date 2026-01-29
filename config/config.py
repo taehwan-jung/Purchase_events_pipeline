@@ -1,10 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Load .env file
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(env_path)
 
 # Environment variables
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -26,3 +25,4 @@ POSTGRES_JDBC_DRIVER = os.getenv("POSTGRES_JDBC_DRIVER")
 # S3
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+

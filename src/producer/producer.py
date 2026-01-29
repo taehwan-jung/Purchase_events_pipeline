@@ -24,7 +24,7 @@ def create_producer():
         producer = KafkaProducer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_serializer=lambda x: json.dumps(x).encode('utf-8'),
-            enable_idempotence=True,
+            enable_idempotence=False,
             acks='all',
             retries=5
         )
