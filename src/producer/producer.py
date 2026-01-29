@@ -1,14 +1,12 @@
 """
 Data Collector
-<<<<<<< HEAD
-Collect purchase history data and send to Kafka
-
+Collects purchase history data and transmits it to Kafka
 """
 import pandas as pd
 import json
-import time
 import os
 import sys
+import time
 from datetime import datetime
 from kafka import KafkaProducer
 from config.config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, CSV_FILE_PATH
@@ -20,22 +18,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Logging setup
 logger = setup_logger("producer", "logs/producer.log")
 
-
-def on_send_success(record_metadata):
-    """Called when message send succeeds"""
-    pass
-
-def on_send_error(excp):
-    """Called when message send fails"""
-    logger.error(f'Message send failed details: {excp}')
-
 # Create producer
 def create_producer():
     try:
         producer = KafkaProducer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
             value_serializer=lambda x: json.dumps(x).encode('utf-8'),
-            acks=1,
+            enable_idempotence=True,
+            acks='all',
+            retries=5,
              # Performance optimization settings
             batch_size=32768,           # 32KB batch size
             linger_ms=10,                # Send after 10ms wait
@@ -51,13 +42,11 @@ def create_producer():
 
 def collect_data(producer):
     if not producer:
-
-        logger.info("No producer available.")
+        logger.info("Producer not available.")
         return
     logger.info("Starting data collection.")
 
-     # Performance metrics
-
+    # Performance metrics
     start_time = time.time()
     message_count = 0
     error_count = 0
@@ -66,41 +55,24 @@ def collect_data(producer):
     df = pd.read_csv(CSV_FILE_PATH, encoding="utf-8")
     total_records = len(df)
 
-    logger.info(f"Sending a total of {total_records} records.")
-    
-    column_mapping = {
-    "InvoiceNo": "invoice_no",
-    "StockCode": "stock_code",
-    "Description": "description",
-    "Quantity": "quantity",
-    "InvoiceDate": "invoice_date",
-    "UnitPrice": "unit_price",
-    "CustomerID": "customer_id",
-    "Country": "country"
-    }
-    df = df.rename(columns=column_mapping)
+    logger.info(f"Transmitting {total_records} records.")
 
-    # 3. Data preprocessing (missing values and type conversion)
-    df['customer_id'] = df['customer_id'].fillna(0).astype(int).astype(str).replace('0', None)
-    df['quantity'] = df['quantity'].astype(int)
-    df['unit_price'] = df['unit_price'].astype(float)
-    # Convert remaining columns to strings in advance
-    for col in ['invoice_no', 'stock_code', 'description', 'invoice_date', 'country']:
-        df[col] = df[col].astype(str)
+    # Send Kafka messages
+    for idx, row in enumerate(df.iterrows()):
+        _, row = row
+        message = {
+            "invoice_no": str(row["InvoiceNo"]),
+            "stock_code": str(row["StockCode"]),
+            "description": str(row["Description"]),
+            "quantity": int(row["Quantity"]),
+            "invoice_date": str(row["InvoiceDate"]),
+            "unit_price": float(row["UnitPrice"]),
+            "customer_id": str(row["CustomerID"]) if "CustomerID" in row else None,
+            "country": str(row["Country"])
+        }
 
-    # 4. Final conversion
-    messages = df.to_dict('records')
-
-
-
-    # Send Kafka messages (asynchronous)
-    for idx, msg in enumerate(messages):
         try:
-            # Asynchronous send (using callbacks)
-            producer.send(KAFKA_TOPIC, value=msg).add_callback(
-                on_send_success
-            ).add_errback(on_send_error)
-
+            producer.send(KAFKA_TOPIC, value=message)
             message_count += 1
 
             # Log progress (every 10%)
@@ -112,7 +84,6 @@ def collect_data(producer):
             logger.error(f"Message send failed: {e}")
             error_count += 1
 
-    # Wait for all messages to be sent
     producer.flush()
 
     # Calculate performance metrics
@@ -134,6 +105,8 @@ def collect_data(producer):
         "elapsed_time": elapsed_time,
         "throughput": throughput
     }
+
+
 
 def main():
     logger.info("Starting data collection")
