@@ -93,7 +93,7 @@ def write_to_postgres(batch_df, batch_id):
     count = batch_df.count()
     print("🔥 [foreachBatch] row count =", count)
     (
-        batch_df.write
+        batch_df.repartition(8).write
         .format("jdbc")
         .option("url", POSTGRES_URL)
         .option("dbtable", POSTGRES_TABLE)
