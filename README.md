@@ -36,7 +36,7 @@ A real-time data pipeline project that collects online retail data, performs ana
 
 | Metric | Baseline | Optimized | Improvement |
 |--------|----------|-----------|-------------|
-| **Throughput** | 10,582.92 msg/sec | 32,526.56 msg/sec | **+207.3% (~3x)** |
+| **Throughput** | 11183.68 msg/sec | 34118.85  msg/sec | **+207.3% (~3x)** |
 | **Processing Time** | 51.21 sec | 16.66 sec | **67.5% reduction** |
 | **Average Latency** | ~0.094 ms | ~0.030 ms | **~3x improvement** |
 
